@@ -1,4 +1,4 @@
-const { Html, Head, Font, Preview, Heading, Row, Section, Text, Hr, Img } = require('@react-email/components');
+import { Html, Head, Font, Preview, Heading, Row, Section, Text, Hr, Img } from '@react-email/components';
 
 const VerificationEmail = ({ name, otp }) => {
   return (

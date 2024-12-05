@@ -12,6 +12,17 @@ cloudinary.v2.config({
     api_secret: process.env.CLOUDINARY_CLOUD_SECRET,
 });
 
+/**
+ * Function to extract the public ID from a Cloudinary URL.
+ * @param {string} url - The Cloudinary URL of the image/video.
+ * @returns {string} - The public ID of the file.
+ */
+function extractPublicId(url) {
+    const parts = url.split('/');
+    const lastPart = parts[parts.length - 1];
+    return lastPart.split('.')[0]; // Remove the file extension
+}
+
 const isValidUUID = (uuid) => {
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     return uuidRegex.test(uuid);
@@ -863,58 +874,176 @@ router.put('/:id', upload.fields([
     }
 });
 
+// router.delete('/:id', async (req, res) => {
+//     const { id: productId } = req.params;
+
+//     try {
+//         const pool = await sql.connect(dbConnect);
+//         const productResult = await pool.request()
+//             .input('ProductId', sql.UniqueIdentifier, productId)
+//             .query(`
+//                 SELECT Images, Video 
+//                 FROM Products 
+//                 WHERE Id = @ProductId
+//             `);
+
+//         if (!productResult.recordset.length) {
+//             return res.status(404).json({ success: false, message: 'Product not found' });
+//         }
+
+//         const product = productResult.recordset[0];
+//         const images = JSON.parse(product.Images);
+//         const video = product.Video;
+
+//         const variantResults = await pool.request()
+//             .input('ProductId', sql.UniqueIdentifier, productId)
+//             .query(`
+//                 SELECT VariantImage 
+//                 FROM ProductVariants 
+//                 WHERE ProductId = @ProductId
+//             `);
+
+//         const variantImages = variantResults.recordset.map(variant => variant.VariantImage);
+
+//         const colorVariantResults = await pool.request()
+//             .input('ProductId', sql.UniqueIdentifier, productId)
+//             .query(`
+//                 SELECT Image 
+//                 FROM ProductColorVariants 
+//                 WHERE ProductId = @ProductId
+//             `);
+
+//         const colorVariantImages = colorVariantResults.recordset.map(colorVariant => colorVariant.Image);
+
+//         const allImages = [...images, ...variantImages, ...colorVariantImages];
+//         for (const imageUrl of allImages) {
+//             try {
+//                 const publicId = extractPublicId(imageUrl);
+//                 await cloudinary.v2.uploader.destroy(publicId);
+//             } catch (cloudinaryError) {
+//                 console.error(`Failed to delete image: ${imageUrl}`, cloudinaryError);
+//             }
+//         }
+
+//         if (video) {
+//             try {
+//                 const videoPublicId = extractPublicId(video);
+//                 await cloudinary.v2.uploader.destroy(videoPublicId, { resource_type: 'video' });
+//             } catch (cloudinaryError) {
+//                 console.error(`Failed to delete video: ${video}`, cloudinaryError);
+//             }
+//         }
+
+//         await pool.request()
+//             .input('ProductId', sql.UniqueIdentifier, productId)
+//             .query(`DELETE FROM ProductColorVariants WHERE ProductId = @ProductId`);
+
+//         await pool.request()
+//             .input('ProductId', sql.UniqueIdentifier, productId)
+//             .query(`DELETE FROM ProductVariants WHERE ProductId = @ProductId`);
+
+//         await pool.request()
+//             .input('ProductId', sql.UniqueIdentifier, productId)
+//             .query(`DELETE FROM Products WHERE Id = @ProductId`);
+
+//         res.status(200).json({ success: true, message: 'Product and its associated data deleted successfully' });
+//     } catch (error) {
+//         console.error('Error deleting product:', error);
+//         res.status(500).json({ success: false, message: 'Server error' });
+//     }
+// });
 router.delete('/:id', async (req, res) => {
+    const { id: productId } = req.params;
+
     try {
         const pool = await sql.connect(dbConnect);
 
+        // Fetch product details
         const productResult = await pool.request()
-            .input('Id', sql.UniqueIdentifier, req.params.id)
+            .input('ProductId', sql.UniqueIdentifier, productId)
             .query(`
-                SELECT p.*, v.VariantImage 
-                FROM Products p 
-                LEFT JOIN ProductVariants v ON p.Id = v.ProductId 
-                WHERE p.Id = @Id
+                SELECT Images, Video 
+                FROM Products 
+                WHERE Id = @ProductId
             `);
 
-        if (productResult.recordset.length === 0) {
-            return res.status(404).send({ success: false, message: 'Product not found' });
+        if (!productResult.recordset.length) {
+            return res.status(404).json({ success: false, message: 'Product not found' });
         }
 
         const product = productResult.recordset[0];
+        const images = JSON.parse(product.Images);
+        const video = product.Video;
 
-        const imageUrls = product.Images ? product.Images.split(',') : [];
-        const videoUrl = product.Video;
+        // Fetch variant and color variant images
+        const variantResults = await pool.request()
+            .input('ProductId', sql.UniqueIdentifier, productId)
+            .query(`
+                SELECT VariantImage 
+                FROM ProductVariants 
+                WHERE ProductId = @ProductId
+            `);
 
-        for (const imageUrl of imageUrls) {
-            const publicId = extractPublicIdFromUrl(imageUrl);
-            await cloudinary.uploader.destroy(publicId);
+        const variantImages = variantResults.recordset.map(variant => variant.VariantImage);
+
+        const colorVariantResults = await pool.request()
+            .input('ProductId', sql.UniqueIdentifier, productId)
+            .query(`
+                SELECT Image 
+                FROM ProductColorVariants 
+                WHERE ProductId = @ProductId
+            `);
+
+        const colorVariantImages = colorVariantResults.recordset.map(colorVariant => colorVariant.Image);
+
+        // Delete associated images from Cloudinary
+        const allImages = [...images, ...variantImages, ...colorVariantImages];
+        for (const imageUrl of allImages) {
+            try {
+                const publicId = extractPublicId(imageUrl);
+                await cloudinary.v2.uploader.destroy(publicId);
+            } catch (cloudinaryError) {
+                console.error(`Failed to delete image: ${imageUrl}`, cloudinaryError);
+            }
         }
 
-        if (videoUrl) {
-            const videoPublicId = extractPublicIdFromUrl(videoUrl);
-            await cloudinary.uploader.destroy(videoPublicId, { resource_type: 'video' });
+        // Delete video from Cloudinary
+        if (video) {
+            try {
+                const videoPublicId = extractPublicId(video);
+                await cloudinary.v2.uploader.destroy(videoPublicId, { resource_type: 'video' });
+            } catch (cloudinaryError) {
+                console.error(`Failed to delete video: ${video}`, cloudinaryError);
+            }
         }
 
-        const variantImages = productResult.recordset.map(row => row.VariantImage).filter(Boolean);
-        for (const variantImage of variantImages) {
-            const variantPublicId = extractPublicIdFromUrl(variantImage);
-            await cloudinary.uploader.destroy(variantPublicId);
-        }
+        // Delete product references from Wishlist
+        await pool.request()
+            .input('ProductId', sql.UniqueIdentifier, productId)
+            .query(`DELETE FROM Wishlist WHERE ProductId = @ProductId`);
+
+        // Delete product variants and color variants
+        await pool.request()
+            .input('ProductId', sql.UniqueIdentifier, productId)
+            .query(`DELETE FROM ProductColorVariants WHERE ProductId = @ProductId`);
 
         await pool.request()
-            .input('ProductId', sql.UniqueIdentifier, req.params.id)
-            .query('DELETE FROM ProductVariants WHERE ProductId = @ProductId');
+            .input('ProductId', sql.UniqueIdentifier, productId)
+            .query(`DELETE FROM ProductVariants WHERE ProductId = @ProductId`);
 
+        // Delete product from Products table
         await pool.request()
-            .input('Id', sql.Int, req.params.id)
-            .query('DELETE FROM Products WHERE Id = @Id');
+            .input('ProductId', sql.UniqueIdentifier, productId)
+            .query(`DELETE FROM Products WHERE Id = @ProductId`);
 
-        res.status(200).send({ success: true, message: 'Product and its variants deleted successfully' });
+        res.status(200).json({ success: true, message: 'Product and its associated data deleted successfully' });
     } catch (error) {
         console.error('Error deleting product:', error);
-        res.status(500).send({ success: false, message: 'Server error' });
+        res.status(500).json({ success: false, message: 'Server error' });
     }
 });
+
+
 
 router.post('/filter-products', async (req, res) => {
     const { brand, color, size, minPrice, maxPrice, rating, sortBy } = req.body;
