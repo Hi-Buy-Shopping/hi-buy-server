@@ -20,7 +20,7 @@ cloudinary.v2.config({
 function extractPublicId(url) {
     const parts = url.split('/');
     const lastPart = parts[parts.length - 1];
-    return lastPart.split('.')[0]; // Remove the file extension
+    return lastPart.split('.')[0]; 
 }
 
 const isValidUUID = (uuid) => {
@@ -671,6 +671,194 @@ router.get('/:id', async (req, res) => {
     }
 });
 
+// router.put('/:id', upload.fields([
+//     { name: 'images', maxCount: 5 },
+//     { name: 'video', maxCount: 1 },
+//     { name: 'variants[0][image]', maxCount: 1 },
+//     { name: 'variants[1][image]', maxCount: 1 },
+//     { name: 'variants[2][image]', maxCount: 1 },
+//     { name: 'variants[3][image]', maxCount: 1 },
+//     { name: 'variants[4][image]', maxCount: 1 },
+//     { name: 'colorVariants[0][image]', maxCount: 1 },
+//     { name: 'colorVariants[1][image]', maxCount: 1 },
+//     { name: 'colorVariants[2][image]', maxCount: 1 },
+//     { name: 'colorVariants[3][image]', maxCount: 1 },
+//     { name: 'colorVariants[4][image]', maxCount: 1 },
+// ]), async (req, res) => {
+//     try {
+//         const { id } = req.params;
+//         const {
+//             shopId, name, description, occasionName, brand,
+//             categoryId, subCategoryId, season, dedicatedFor, stock, productRam, productRom,
+//             productSimSlots, productModel, sizes, colors, productDetails, variants, colorVariants, weight,
+//             catName, subCatName, subSubCategoryId, itemsCategoryId, retainedImages = [], retainedVideo = null,
+//             retainedVariantImages = [], retainedColorVariantImages = []
+//         } = req.body;
+//         console.log(req.body)
+//         const safeVariants = Array.isArray(variants) ? variants : [];
+//         const safeColorVariants = Array.isArray(colorVariants) ? colorVariants : [];
+//         const pool = await sql.connect(dbConnect);
+
+//         let imageUrls = [...retainedImages];
+//         if (req.files['images']) {
+//             for (const file of req.files['images']) {
+//                 const result = await cloudinary.v2.uploader.upload(file.path);
+//                 imageUrls.push(result.secure_url);
+//             }
+//         }
+
+//         const imagesToDelete = retainedImages.filter(img => !imageUrls.includes(img));
+//         for (const img of imagesToDelete) {
+//             await cloudinary.v2.uploader.destroy(img);
+//         }
+//         let videoUrl = retainedVideo;
+//         if (req.files['video']) {
+//             const videoFile = req.files['video'][0];
+//             const result = await cloudinary.v2.uploader.upload(videoFile.path, { resource_type: 'video' });
+//             videoUrl = result.secure_url;
+
+//             if (retainedVideo) {
+//                 await cloudinary.v2.uploader.destroy(retainedVideo, { resource_type: 'video' });
+//             }
+//         }
+//         const productRequest = pool.request();
+//         productRequest.input('Id', sql.UniqueIdentifier, id);
+//         productRequest.input('ShopId', sql.UniqueIdentifier, shopId);
+//         productRequest.input('Name', sql.NVarChar, name);
+//         productRequest.input('Description', sql.NVarChar, description);
+//         productRequest.input('Images', sql.NVarChar, JSON.stringify(imageUrls));
+//         productRequest.input('Video', sql.NVarChar, videoUrl);
+//         productRequest.input('OccasionName', sql.NVarChar, occasionName);
+//         productRequest.input('Brand', sql.NVarChar, brand);
+//         productRequest.input('CatName', sql.NVarChar, catName);
+//         productRequest.input('SubCatName', sql.NVarChar, subCatName);
+//         productRequest.input('CategoryId', sql.UniqueIdentifier, categoryId);
+//         productRequest.input('SubCategoryId', sql.UniqueIdentifier, subCategoryId);
+//         productRequest.input('SubSubCategoryId', sql.UniqueIdentifier, subSubCategoryId);
+//         productRequest.input('ItemsCategoryId', sql.UniqueIdentifier, itemsCategoryId);
+//         productRequest.input('Season', sql.NVarChar, season);
+//         productRequest.input('DedicatedFor', sql.NVarChar, dedicatedFor);
+//         productRequest.input('Stock', sql.Int, stock);
+//         productRequest.input('ProductRam', sql.NVarChar, JSON.stringify(productRam));
+//         productRequest.input('ProductRom', sql.NVarChar, JSON.stringify(productRom));
+//         productRequest.input('ProductSimSlots', sql.NVarChar, JSON.stringify(productSimSlots));
+//         productRequest.input('ProductModel', sql.NVarChar, productModel);
+//         productRequest.input('Size', sql.NVarChar, JSON.stringify(sizes));
+//         productRequest.input('Color', sql.NVarChar, JSON.stringify(colors));
+//         productRequest.input('Detail', sql.NVarChar, JSON.stringify(productDetails));
+//         productRequest.input('Weight', sql.Decimal(4, 2), weight);
+
+//         await productRequest.query(`
+//             UPDATE Products SET 
+//                 ShopId = @ShopId, Name = @Name, Description = @Description, Images = @Images, 
+//                 Video = @Video, OccasionName = @OccasionName, Brand = @Brand,
+//                  CatName = @CatName, SubCatName = @SubCatName,
+//                 CategoryId = @CategoryId, SubCategoryId = @SubCategoryId, SubSubCategoryId = @SubSubCategoryId,
+//                 ItemsCategoryId = @ItemsCategoryId, Season = @Season, DedicatedFor = @DedicatedFor, 
+//                 Stock = @Stock, ProductRam = @ProductRam, ProductRom = @ProductRom,
+//                 ProductSimSlots = @ProductSimSlots, ProductModel = @ProductModel, Size = @Size, 
+//                 Color = @Color, Detail = @Detail, Weight = @Weight WHERE Id = @Id;
+//         `);
+//         if (safeVariants.length > 0) {
+//             for (const [index, variant] of safeVariants.entries()) {
+//                 let variantImageUrl = variant.retainedImage || ''; 
+        
+//                 if (req.files[`variants[${index}][image]`]) {
+//                     const variantImage = req.files[`variants[${index}][image]`][0];
+//                     const result = await cloudinary.v2.uploader.upload(variantImage.path);
+//                     variantImageUrl = result.secure_url;
+//                     if (variant.retainedImage) {
+//                         await cloudinary.v2.uploader.destroy(variant.retainedImage);
+//                     }
+//                 }
+//                 const sizes = typeof variant.sizes === 'string'
+//                     ? JSON.parse(variant.sizes)
+//                     : variant.sizes;
+        
+//                 if (!Array.isArray(sizes)) {
+//                     return res.status(400).json({ success: false, message: 'Sizes must be an array.' });
+//                 }
+        
+//                 const variantRequest = pool.request();
+//                 variantRequest.input('ProductId', sql.UniqueIdentifier, id);
+//                 variantRequest.input('VariantColor', sql.NVarChar, variant.color);
+//                 variantRequest.input('VariantImage', sql.NVarChar, variantImageUrl);
+//                 variantRequest.input('Sizes', sql.NVarChar, JSON.stringify(sizes));
+//                 variantRequest.input('Expense', sql.Decimal(10, 2), variant.expense);
+//                 await variantRequest.query(`
+//                     IF EXISTS (
+//                         SELECT 1 FROM ProductVariants
+//                         WHERE ProductId = @ProductId AND VariantColor = @VariantColor
+//                     )
+//                     BEGIN
+//                         UPDATE ProductVariants
+//                         SET VariantImage = @VariantImage, Sizes = @Sizes, Expense = @Expense
+//                         WHERE ProductId = @ProductId AND VariantColor = @VariantColor;
+//                     END
+//                     ELSE
+//                     BEGIN
+//                         INSERT INTO ProductVariants
+//                         (ProductId, VariantColor, VariantImage, Sizes, Expense)
+//                         VALUES (@ProductId, @VariantColor, @VariantImage, @Sizes, @Expense);
+//                     END
+//                 `);
+//             }
+//         }
+//         if (safeColorVariants.length > 0) {
+//             for (const [index, colorVariant] of safeColorVariants.entries()) {
+//                 let colorVariantImageUrl = colorVariant.retainedImage || '';
+        
+//                 if (req.files[`colorVariants[${index}][image]`]) {
+//                     const colorVariantImage = req.files[`colorVariants[${index}][image]`][0];
+//                     const result = await cloudinary.v2.uploader.upload(colorVariantImage.path);
+//                     colorVariantImageUrl = result.secure_url;
+        
+//                     if (colorVariant.retainedImage) {
+//                         await cloudinary.v2.uploader.destroy(colorVariant.retainedImage);
+//                     }
+//                 }
+        
+//                 if (!colorVariantImageUrl) {
+//                     continue;
+//                 }
+//                 const colorVariantRequest = pool.request();
+//                 colorVariantRequest.input('ProductId', sql.UniqueIdentifier, id);
+//                 colorVariantRequest.input('Color', sql.NVarChar, colorVariant.color);
+//                 colorVariantRequest.input('Image', sql.NVarChar, colorVariantImageUrl);
+//                 colorVariantRequest.input('Price', sql.Decimal(10, 2), colorVariant.price);
+//                 colorVariantRequest.input('OldPrice', sql.Decimal(10, 2), colorVariant.oldPrice);
+//                 colorVariantRequest.input('Discount', sql.Decimal(10, 2), colorVariant.discount);
+//                 colorVariantRequest.input('Expense', sql.Decimal(10, 2), colorVariant.expense);
+//                 colorVariantRequest.input('Stock', sql.Int, colorVariant.stock);
+        
+//                 await colorVariantRequest.query(`
+//                     IF EXISTS (
+//                         SELECT 1 FROM ProductColorVariants
+//                         WHERE ProductId = @ProductId AND Color = @Color
+//                     )
+//                     BEGIN
+//                         UPDATE ProductColorVariants
+//                         SET Image = @Image, Price = @Price, OldPrice = @OldPrice, Discount = @Discount,
+//                             Expense = @Expense, Stock = @Stock
+//                         WHERE ProductId = @ProductId AND Color = @Color;
+//                     END
+//                     ELSE
+//                     BEGIN
+//                         INSERT INTO ProductColorVariants
+//                         (ProductId, Color, Image, Price, OldPrice, Discount, Expense, Stock)
+//                         VALUES (@ProductId, @Color, @Image, @Price, @OldPrice, @Discount, @Expense, @Stock);
+//                     END
+//                 `);
+//             }
+//         }
+        
+//         res.status(200).send({ success: true, message: 'Product and variants updated successfully.' });
+//     } catch (error) {
+//         console.error('Error updating product:', error);
+//         res.status(500).send({ success: false, message: 'Server error.' });
+//     }
+// });
+
 router.put('/:id', upload.fields([
     { name: 'images', maxCount: 5 },
     { name: 'video', maxCount: 1 },
@@ -699,7 +887,6 @@ router.put('/:id', upload.fields([
         const safeColorVariants = Array.isArray(colorVariants) ? colorVariants : [];
         const pool = await sql.connect(dbConnect);
 
-        // Step 1: Handle Product Images
         let imageUrls = [...retainedImages];
         if (req.files['images']) {
             for (const file of req.files['images']) {
@@ -712,8 +899,6 @@ router.put('/:id', upload.fields([
         for (const img of imagesToDelete) {
             await cloudinary.v2.uploader.destroy(img);
         }
-
-        // Step 2: Handle Product Video
         let videoUrl = retainedVideo;
         if (req.files['video']) {
             const videoFile = req.files['video'][0];
@@ -724,8 +909,6 @@ router.put('/:id', upload.fields([
                 await cloudinary.v2.uploader.destroy(retainedVideo, { resource_type: 'video' });
             }
         }
-
-        // Step 3: Update Products Table
         const productRequest = pool.request();
         productRequest.input('Id', sql.UniqueIdentifier, id);
         productRequest.input('ShopId', sql.UniqueIdentifier, shopId);
@@ -764,58 +947,103 @@ router.put('/:id', upload.fields([
                 ProductSimSlots = @ProductSimSlots, ProductModel = @ProductModel, Size = @Size, 
                 Color = @Color, Detail = @Detail, Weight = @Weight WHERE Id = @Id;
         `);
-        if (safeVariants.length > 0) {
-            for (const [index, variant] of safeVariants.entries()) {
-                let variantImageUrl = variant.retainedImage || ''; // Use retainedImage if no new image is provided
+        // if (safeVariants.length > 0) {
+        //     for (const [index, variant] of safeVariants.entries()) {
+        //         let variantImageUrl = variant.retainedImage || ''; 
         
-                // Check if a new image is uploaded
-                if (req.files[`variants[${index}][image]`]) {
-                    const variantImage = req.files[`variants[${index}][image]`][0];
-                    const result = await cloudinary.v2.uploader.upload(variantImage.path);
-                    variantImageUrl = result.secure_url;
+        //         if (req.files[`variants[${index}][image]`]) {
+        //             const variantImage = req.files[`variants[${index}][image]`][0];
+        //             const result = await cloudinary.v2.uploader.upload(variantImage.path);
+        //             variantImageUrl = result.secure_url;
+        //             if (variant.retainedImage) {
+        //                 await cloudinary.v2.uploader.destroy(variant.retainedImage);
+        //             }
+        //         }
+        //         const sizes = typeof variant.sizes === 'string'
+        //             ? JSON.parse(variant.sizes)
+        //             : variant.sizes;
         
-                    // If there's a retained image, delete it from Cloudinary
-                    if (variant.retainedImage) {
-                        await cloudinary.v2.uploader.destroy(variant.retainedImage);
-                    }
-                }
+        //         if (!Array.isArray(sizes)) {
+        //             return res.status(400).json({ success: false, message: 'Sizes must be an array.' });
+        //         }
         
-                // Ensure sizes are parsed correctly
-                const sizes = typeof variant.sizes === 'string'
-                    ? JSON.parse(variant.sizes)
-                    : variant.sizes;
-        
-                if (!Array.isArray(sizes)) {
-                    return res.status(400).json({ success: false, message: 'Sizes must be an array.' });
-                }
-        
-                const variantRequest = pool.request();
-                variantRequest.input('ProductId', sql.UniqueIdentifier, id);
-                variantRequest.input('VariantColor', sql.NVarChar, variant.color);
-                variantRequest.input('VariantImage', sql.NVarChar, variantImageUrl); // Use the resolved image URL
-                variantRequest.input('Sizes', sql.NVarChar, JSON.stringify(sizes));
-                variantRequest.input('Expense', sql.Decimal(10, 2), variant.expense);
-        
-                await variantRequest.query(`
-                    IF EXISTS (
-                        SELECT 1 FROM ProductVariants
-                        WHERE ProductId = @ProductId AND VariantColor = @VariantColor
-                    )
-                    BEGIN
-                        UPDATE ProductVariants
-                        SET VariantImage = @VariantImage, Sizes = @Sizes, Expense = @Expense
-                        WHERE ProductId = @ProductId AND VariantColor = @VariantColor;
-                    END
-                    ELSE
-                    BEGIN
-                        INSERT INTO ProductVariants
-                        (ProductId, VariantColor, VariantImage, Sizes, Expense)
-                        VALUES (@ProductId, @VariantColor, @VariantImage, @Sizes, @Expense);
-                    END
-                `);
-            }
-        }
-        
+        //         const variantRequest = pool.request();
+        //         variantRequest.input('ProductId', sql.UniqueIdentifier, id);
+        //         variantRequest.input('VariantColor', sql.NVarChar, variant.color);
+        //         variantRequest.input('VariantImage', sql.NVarChar, variantImageUrl);
+        //         variantRequest.input('Sizes', sql.NVarChar, JSON.stringify(sizes));
+        //         variantRequest.input('Expense', sql.Decimal(10, 2), variant.expense);
+        //         await variantRequest.query(`
+        //             IF EXISTS (
+        //                 SELECT 1 FROM ProductVariants
+        //                 WHERE ProductId = @ProductId AND VariantColor = @VariantColor
+        //             )
+        //             BEGIN
+        //                 UPDATE ProductVariants
+        //                 SET VariantImage = @VariantImage, Sizes = @Sizes, Expense = @Expense
+        //                 WHERE ProductId = @ProductId AND VariantColor = @VariantColor;
+        //             END
+        //             ELSE
+        //             BEGIN
+        //                 INSERT INTO ProductVariants
+        //                 (ProductId, VariantColor, VariantImage, Sizes, Expense)
+        //                 VALUES (@ProductId, @VariantColor, @VariantImage, @Sizes, @Expense);
+        //             END
+        //         `);
+        //     }
+        // }
+          // Handle variants: Update, Delete, or Insert
+          const currentVariants = await pool.request()
+          .input('ProductId', sql.UniqueIdentifier, id)
+          .query(`
+              SELECT VariantColor FROM ProductVariants WHERE ProductId = @ProductId;
+          `);
+
+      const existingVariantColors = currentVariants.recordset.map(v => v.VariantColor);
+      for (const color of existingVariantColors) {
+          if (!safeVariants.some(variant => variant.color === color)) {
+              await pool.request()
+                  .input('ProductId', sql.UniqueIdentifier, id)
+                  .input('VariantColor', sql.NVarChar, color)
+                  .query(`
+                      DELETE FROM ProductVariants WHERE ProductId = @ProductId AND VariantColor = @VariantColor;
+                  `);
+          }
+      }
+
+      for (const variant of safeVariants) {
+          const variantImageUrl = variant.retainedImage || (req.files[`variants[${variant.color}]image`] && await cloudinary.v2.uploader.upload(req.files[`variants[${variant.color}]image`][0].path));
+
+          const existingVariant = existingVariantColors.includes(variant.color);
+          const sizes = Array.isArray(variant.sizes) ? variant.sizes : JSON.parse(variant.sizes);
+
+          if (existingVariant) {
+              await pool.request()
+                  .input('ProductId', sql.UniqueIdentifier, id)
+                  .input('VariantColor', sql.NVarChar, variant.color)
+                  .input('VariantImage', sql.NVarChar, variantImageUrl)
+                  .input('Sizes', sql.NVarChar, JSON.stringify(sizes))
+                  .input('Expense', sql.Decimal(10, 2), variant.expense)
+                  .query(`
+                      UPDATE ProductVariants
+                      SET VariantImage = @VariantImage, Sizes = @Sizes, Expense = @Expense
+                      WHERE ProductId = @ProductId AND VariantColor = @VariantColor;
+                  `);
+          } else {
+              await pool.request()
+                  .input('ProductId', sql.UniqueIdentifier, id)
+                  .input('VariantColor', sql.NVarChar, variant.color)
+                  .input('VariantImage', sql.NVarChar, variantImageUrl)
+                  .input('Sizes', sql.NVarChar, JSON.stringify(sizes))
+                  .input('Expense', sql.Decimal(10, 2), variant.expense)
+                  .query(`
+                      INSERT INTO ProductVariants (ProductId, VariantColor, VariantImage, Sizes, Expense)
+                      VALUES (@ProductId, @VariantColor, @VariantImage, @Sizes, @Expense);
+                  `);
+          }
+      }
+
+
         if (safeColorVariants.length > 0) {
             for (const [index, colorVariant] of safeColorVariants.entries()) {
                 let colorVariantImageUrl = colorVariant.retainedImage || '';
@@ -833,7 +1061,6 @@ router.put('/:id', upload.fields([
                 if (!colorVariantImageUrl) {
                     continue;
                 }
-        
                 const colorVariantRequest = pool.request();
                 colorVariantRequest.input('ProductId', sql.UniqueIdentifier, id);
                 colorVariantRequest.input('Color', sql.NVarChar, colorVariant.color);
@@ -865,8 +1092,6 @@ router.put('/:id', upload.fields([
             }
         }
         
-
-
         res.status(200).send({ success: true, message: 'Product and variants updated successfully.' });
     } catch (error) {
         console.error('Error updating product:', error);
@@ -874,91 +1099,10 @@ router.put('/:id', upload.fields([
     }
 });
 
-// router.delete('/:id', async (req, res) => {
-//     const { id: productId } = req.params;
-
-//     try {
-//         const pool = await sql.connect(dbConnect);
-//         const productResult = await pool.request()
-//             .input('ProductId', sql.UniqueIdentifier, productId)
-//             .query(`
-//                 SELECT Images, Video 
-//                 FROM Products 
-//                 WHERE Id = @ProductId
-//             `);
-
-//         if (!productResult.recordset.length) {
-//             return res.status(404).json({ success: false, message: 'Product not found' });
-//         }
-
-//         const product = productResult.recordset[0];
-//         const images = JSON.parse(product.Images);
-//         const video = product.Video;
-
-//         const variantResults = await pool.request()
-//             .input('ProductId', sql.UniqueIdentifier, productId)
-//             .query(`
-//                 SELECT VariantImage 
-//                 FROM ProductVariants 
-//                 WHERE ProductId = @ProductId
-//             `);
-
-//         const variantImages = variantResults.recordset.map(variant => variant.VariantImage);
-
-//         const colorVariantResults = await pool.request()
-//             .input('ProductId', sql.UniqueIdentifier, productId)
-//             .query(`
-//                 SELECT Image 
-//                 FROM ProductColorVariants 
-//                 WHERE ProductId = @ProductId
-//             `);
-
-//         const colorVariantImages = colorVariantResults.recordset.map(colorVariant => colorVariant.Image);
-
-//         const allImages = [...images, ...variantImages, ...colorVariantImages];
-//         for (const imageUrl of allImages) {
-//             try {
-//                 const publicId = extractPublicId(imageUrl);
-//                 await cloudinary.v2.uploader.destroy(publicId);
-//             } catch (cloudinaryError) {
-//                 console.error(`Failed to delete image: ${imageUrl}`, cloudinaryError);
-//             }
-//         }
-
-//         if (video) {
-//             try {
-//                 const videoPublicId = extractPublicId(video);
-//                 await cloudinary.v2.uploader.destroy(videoPublicId, { resource_type: 'video' });
-//             } catch (cloudinaryError) {
-//                 console.error(`Failed to delete video: ${video}`, cloudinaryError);
-//             }
-//         }
-
-//         await pool.request()
-//             .input('ProductId', sql.UniqueIdentifier, productId)
-//             .query(`DELETE FROM ProductColorVariants WHERE ProductId = @ProductId`);
-
-//         await pool.request()
-//             .input('ProductId', sql.UniqueIdentifier, productId)
-//             .query(`DELETE FROM ProductVariants WHERE ProductId = @ProductId`);
-
-//         await pool.request()
-//             .input('ProductId', sql.UniqueIdentifier, productId)
-//             .query(`DELETE FROM Products WHERE Id = @ProductId`);
-
-//         res.status(200).json({ success: true, message: 'Product and its associated data deleted successfully' });
-//     } catch (error) {
-//         console.error('Error deleting product:', error);
-//         res.status(500).json({ success: false, message: 'Server error' });
-//     }
-// });
 router.delete('/:id', async (req, res) => {
     const { id: productId } = req.params;
-
     try {
         const pool = await sql.connect(dbConnect);
-
-        // Fetch product details
         const productResult = await pool.request()
             .input('ProductId', sql.UniqueIdentifier, productId)
             .query(`
@@ -970,12 +1114,9 @@ router.delete('/:id', async (req, res) => {
         if (!productResult.recordset.length) {
             return res.status(404).json({ success: false, message: 'Product not found' });
         }
-
         const product = productResult.recordset[0];
         const images = JSON.parse(product.Images);
         const video = product.Video;
-
-        // Fetch variant and color variant images
         const variantResults = await pool.request()
             .input('ProductId', sql.UniqueIdentifier, productId)
             .query(`
@@ -985,7 +1126,6 @@ router.delete('/:id', async (req, res) => {
             `);
 
         const variantImages = variantResults.recordset.map(variant => variant.VariantImage);
-
         const colorVariantResults = await pool.request()
             .input('ProductId', sql.UniqueIdentifier, productId)
             .query(`
@@ -995,8 +1135,6 @@ router.delete('/:id', async (req, res) => {
             `);
 
         const colorVariantImages = colorVariantResults.recordset.map(colorVariant => colorVariant.Image);
-
-        // Delete associated images from Cloudinary
         const allImages = [...images, ...variantImages, ...colorVariantImages];
         for (const imageUrl of allImages) {
             try {
@@ -1006,8 +1144,6 @@ router.delete('/:id', async (req, res) => {
                 console.error(`Failed to delete image: ${imageUrl}`, cloudinaryError);
             }
         }
-
-        // Delete video from Cloudinary
         if (video) {
             try {
                 const videoPublicId = extractPublicId(video);
@@ -1016,13 +1152,10 @@ router.delete('/:id', async (req, res) => {
                 console.error(`Failed to delete video: ${video}`, cloudinaryError);
             }
         }
-
-        // Delete product references from Wishlist
         await pool.request()
             .input('ProductId', sql.UniqueIdentifier, productId)
             .query(`DELETE FROM Wishlist WHERE ProductId = @ProductId`);
 
-        // Delete product variants and color variants
         await pool.request()
             .input('ProductId', sql.UniqueIdentifier, productId)
             .query(`DELETE FROM ProductColorVariants WHERE ProductId = @ProductId`);
@@ -1030,8 +1163,6 @@ router.delete('/:id', async (req, res) => {
         await pool.request()
             .input('ProductId', sql.UniqueIdentifier, productId)
             .query(`DELETE FROM ProductVariants WHERE ProductId = @ProductId`);
-
-        // Delete product from Products table
         await pool.request()
             .input('ProductId', sql.UniqueIdentifier, productId)
             .query(`DELETE FROM Products WHERE Id = @ProductId`);
