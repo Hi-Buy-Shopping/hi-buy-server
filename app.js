@@ -9,14 +9,12 @@ import mssql from 'mssql'
 
 dotenv.config();
 const app = express();
-const port = process.env.PORT || 3700
+// const port = process.env.PORT || 3700
 app.use(express.json());
 app.use(cors());
 app.options('*', cors());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
-
-await dbConnect
 
 import userRoute from './routes/user.js'
 import categoryRoute from './routes/category.js'
@@ -93,7 +91,24 @@ io.on('connection', (socket) => {
     });
   });
 
+  
+const startServer = async () => {
+  try {
 
-app.listen(port, () => {
-    console.log(`Server is running on http://localhost:${port}`);
-});
+await dbConnect;
+
+    const port = process.env.PORT || 3700; 
+
+    server.listen(port, () => {
+      console.log(`HTTP Server running at http://localhost:${port}`);
+    });
+  } catch (err) {
+    console.error("Error starting server:", err);
+  }
+};
+
+startServer();
+
+// app.listen(port, () => {
+//     console.log(`Server is running on http://localhost:${port}`);
+// });
