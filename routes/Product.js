@@ -1435,8 +1435,6 @@ router.get('/twenty-percent/products-with-discount', async (req, res) => {
         `;
         const productVariantsResult = await pool.request().query(productVariantsQuery);
         let productsWithVariants = productVariantsResult.recordset;
-
-        // Parse JSON fields and filter for discounts
         productsWithVariants = productsWithVariants
             .map((product) => {
                 try {
@@ -1457,11 +1455,9 @@ router.get('/twenty-percent/products-with-discount', async (req, res) => {
                 return product;
             })
             .filter((product) => {
-                // Check discount in Sizes array (first element, index 0)
                 return product.Sizes.length > 0 && product.Sizes[0].discount >= 20;
             });
 
-        // Fetch products with discount >= 20% from ProductColorVariants table
         const productColorVariantsQuery = `
             SELECT DISTINCT p.*, s.Name AS ShopName
             FROM Products p
@@ -1473,7 +1469,6 @@ router.get('/twenty-percent/products-with-discount', async (req, res) => {
         const productColorVariantsResult = await pool.request().query(productColorVariantsQuery);
         let productsWithColorVariants = productColorVariantsResult.recordset;
 
-        // Populate colorVariants for products from ProductColorVariants
         for (const product of productsWithColorVariants) {
             try {
                 product.Images = product.Images ? JSON.parse(product.Images) : [];
@@ -1485,8 +1480,6 @@ router.get('/twenty-percent/products-with-discount', async (req, res) => {
             } catch {
                 product.Detail = '';
             }
-
-            // Fetch colorVariants for each product
             const colorVariantsResult = await pool.request()
                 .input('ProductId', sql.UniqueIdentifier, product.Id)
                 .query(`
@@ -1497,7 +1490,6 @@ router.get('/twenty-percent/products-with-discount', async (req, res) => {
             );
         }
 
-        // Combine products and paginate
         let allProducts = [...productsWithVariants, ...productsWithColorVariants];
         const totalProducts = allProducts.length;
         allProducts = allProducts.slice(skip, skip + perPage);
@@ -1608,7 +1600,7 @@ router.get('/fifty-percent/products-with-discount', async (req, res) => {
         res.status(500).json({ success: false, message: 'Server error' });
     }
 });
-router.get('/under-1000/products', async (req, res) => {
+router.get('/under-1500/products', async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
         const perPage = parseInt(req.query.perPage) || 10;
@@ -1625,8 +1617,6 @@ router.get('/under-1000/products', async (req, res) => {
         `;
         const productVariantsResult = await pool.request().query(productVariantsQuery);
         let productsWithVariants = productVariantsResult.recordset;
-
-        // Parse JSON fields and filter for price < 1000
         productsWithVariants = productsWithVariants
             .map((product) => {
                 try {
@@ -1647,17 +1637,15 @@ router.get('/under-1000/products', async (req, res) => {
                 return product;
             })
             .filter((product) => {
-                // Check price in Sizes array (first element, index 0)
-                return product.Sizes.length > 0 && product.Sizes[0].price < 1000;
+                return product.Sizes.length > 0 && product.Sizes[0].price < 1500;
             });
 
-        // Fetch products with price < 1000 from ProductColorVariants
         const productColorVariantsQuery = `
             SELECT DISTINCT p.*, s.Name AS ShopName
             FROM Products p
             LEFT JOIN Shops s ON p.ShopId = s.Id
             WHERE p.Id IN (
-                SELECT ProductId FROM ProductColorVariants WHERE price < 1000
+                SELECT ProductId FROM ProductColorVariants WHERE price < 1500
             )
         `;
         const productColorVariantsResult = await pool.request().query(productColorVariantsQuery);
@@ -1680,7 +1668,7 @@ router.get('/under-1000/products', async (req, res) => {
             const colorVariantsResult = await pool.request()
                 .input('ProductId', sql.UniqueIdentifier, product.Id)
                 .query(`
-                    SELECT * FROM ProductColorVariants WHERE ProductId = @ProductId AND price < 1000
+                    SELECT * FROM ProductColorVariants WHERE ProductId = @ProductId AND price < 1500
                 `);
             product.colorVariants = colorVariantsResult.recordset.map((variant) =>
                 Object.fromEntries(Object.entries(variant).map(([key, value]) => [key.toLowerCase(), value]))
@@ -1698,7 +1686,7 @@ router.get('/under-1000/products', async (req, res) => {
             perPage,
         });
     } catch (error) {
-        console.error('Error fetching products with price < 1000:', error);
+        console.error('Error fetching products with price < 1500:', error);
         res.status(500).json({ success: false, message: 'Server error' });
     }
 });
