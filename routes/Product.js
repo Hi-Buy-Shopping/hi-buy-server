@@ -33,7 +33,6 @@ const storage = new CloudinaryStorage({
     params: {
         folder: 'products',
         allowedFormats: ['jpg', 'png', 'jpeg', 'webp', 'mp4'],
-        transformation: [{ width: 500, height: 500, crop: 'limit' }],
     },
 });
 
@@ -1523,7 +1522,6 @@ router.get('/fifty-percent/products-with-discount', async (req, res) => {
         const productVariantsResult = await pool.request().query(productVariantsQuery);
         let productsWithVariants = productVariantsResult.recordset;
 
-        // Parse JSON fields and filter for discounts
         productsWithVariants = productsWithVariants
             .map((product) => {
                 try {
@@ -1544,11 +1542,9 @@ router.get('/fifty-percent/products-with-discount', async (req, res) => {
                 return product;
             })
             .filter((product) => {
-                // Check discount in Sizes array (first element, index 0)
                 return product.Sizes.length > 0 && product.Sizes[0].discount >= 50;
             });
 
-        // Fetch products with discount >= 50% from ProductColorVariants table
         const productColorVariantsQuery = `
             SELECT DISTINCT p.*, s.Name AS ShopName
             FROM Products p
@@ -1560,7 +1556,6 @@ router.get('/fifty-percent/products-with-discount', async (req, res) => {
         const productColorVariantsResult = await pool.request().query(productColorVariantsQuery);
         let productsWithColorVariants = productColorVariantsResult.recordset;
 
-        // Populate colorVariants for products from ProductColorVariants
         for (const product of productsWithColorVariants) {
             try {
                 product.Images = product.Images ? JSON.parse(product.Images) : [];
@@ -1573,7 +1568,6 @@ router.get('/fifty-percent/products-with-discount', async (req, res) => {
                 product.Detail = '';
             }
 
-            // Fetch colorVariants for each product
             const colorVariantsResult = await pool.request()
                 .input('ProductId', sql.UniqueIdentifier, product.Id)
                 .query(`
@@ -1584,7 +1578,6 @@ router.get('/fifty-percent/products-with-discount', async (req, res) => {
             );
         }
 
-        // Combine products and paginate
         let allProducts = [...productsWithVariants, ...productsWithColorVariants];
         const totalProducts = allProducts.length;
         allProducts = allProducts.slice(skip, skip + perPage);
@@ -1785,7 +1778,7 @@ router.get('/under-1500/products', async (req, res) => {
 router.get('/search/result', async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
-        const perPage = parseInt(req.query.perPage) || 10;
+        const perPage = parseInt(req.query.perPage) || 200;
         const skip = (page - 1) * perPage;
 
         const searchQuery = req.query.query || '';

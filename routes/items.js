@@ -34,7 +34,7 @@ router.post('/create', upload.single('image'), async (req, res) => {
     const { subSubCategoryId, name } = req.body;
     const imageUrl = req.file.path;
 
-    await createItemsTable();  // Ensure table is created before inserting data
+    await createItemsTable(); 
     const pool = await sql.connect(dbConnect);
 
     const insertQuery = `
@@ -64,13 +64,11 @@ router.post('/create', upload.single('image'), async (req, res) => {
   }
 });
 
-// 2. Get All Items with Pagination
 router.get('/', async (req, res) => {
   try {
-    // Get the subSubCategoryId from the query parameters (if provided)
     const subSubCategoryId = req.query.subSubCategoryId;
     const page = parseInt(req.query.page) || 1;
-    const perPage = parseInt(req.query.perPage) || 10;
+    const perPage = parseInt(req.query.perPage) || 20;
     const skip = (page - 1) * perPage;
 
     const pool = await sql.connect(dbConnect);
@@ -97,7 +95,6 @@ router.get('/', async (req, res) => {
       `;
     }
 
-    // Count the total number of items (filtered by subSubCategoryId if provided)
     const totalPostsResult = await pool.request()
       .input('subSubCategoryId', sql.UniqueIdentifier, subSubCategoryId)
       .query(totalPostsQuery);
@@ -109,7 +106,7 @@ router.get('/', async (req, res) => {
       return res.status(404).json({ message: 'Page Not Found' });
     }
 
-    // Fetch the items (filtered by subSubCategoryId if provided)
+    
     const itemListResult = await pool.request()
       .input('subSubCategoryId', sql.UniqueIdentifier, subSubCategoryId)
       .input('skip', sql.Int, skip)
