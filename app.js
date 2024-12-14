@@ -10,7 +10,8 @@ import mssql from 'mssql'
 dotenv.config();
 const app = express();
 // const port = process.env.PORT || 3700
-app.use(express.json());
+app.use(express.json({ limit: '17mb' }));
+app.use(express.urlencoded({ limit: '10mb', extended: true }));
 app.use(cors());
 app.options('*', cors());
 app.use(bodyParser.urlencoded({ extended: true }));
