@@ -236,7 +236,6 @@ router.get('/', async (req, res) => {
         const page = parseInt(req.query.page) || 1;
         const perPage = parseInt(req.query.perPage) || 10;
         const skip = (page - 1) * perPage;
-
         const status = req.query.status || '';
         const brand = req.query.brand ? req.query.brand.split(',') : [];
         const color = req.query.color ? req.query.color.split(',') : [];

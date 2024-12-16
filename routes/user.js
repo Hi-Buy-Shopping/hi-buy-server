@@ -8,6 +8,7 @@ import { sendVerificationEmail } from '../helper/sendVerificationEmail.js';
 import createShopsTable from '../tables/shops.js';
 import jwt from 'jsonwebtoken'
 import { sendForgetPasswordEmail } from '../helper/sendForgetPasswordEmail.js';
+import { CloudinaryStorage } from 'multer-storage-cloudinary';
 import path from 'path'; 
 const isValidUUID = (uuid) => {
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -16,14 +17,21 @@ const isValidUUID = (uuid) => {
 
 const router = express.Router()
 
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, 'uploads/');
-    },
-    filename: (req, file, cb) => {
-        cb(null, Date.now() + path.extname(file.originalname));
-    }
+const storage = new CloudinaryStorage({
+  cloudinary: cloudinary.v2,
+  params: {
+    folder: 'users', 
+    allowedFormats: ['jpg', 'png', 'jpeg', 'webp'],
+  }
 });
+// const storage = multer.diskStorage({
+//     destination: (req, file, cb) => {
+//         cb(null, 'uploads/');
+//     },
+//     filename: (req, file, cb) => {
+//         cb(null, Date.now() + path.extname(file.originalname));
+//     }
+// });
 const upload = multer({ storage });
 
 cloudinary.v2.config({
