@@ -1,0 +1,8 @@
+
+// CREATE TABLE ShopTokens (
+//     TokenId INT PRIMARY KEY IDENTITY,
+//     ShopId UNIQUEIDENTIFIER NOT NULL,
+//     DeviceToken NVARCHAR(MAX) NOT NULL,
+//     CreatedAt DATETIME DEFAULT GETDATE(),
+//     FOREIGN KEY (ShopId) REFERENCES Shops(Id)
+// );

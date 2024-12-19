@@ -20,7 +20,7 @@ cloudinary.v2.config({
 function extractPublicId(url) {
     const parts = url.split('/');
     const lastPart = parts[parts.length - 1];
-    return lastPart.split('.')[0]; 
+    return lastPart.split('.')[0];
 }
 
 const isValidUUID = (uuid) => {
@@ -347,8 +347,8 @@ router.get('/', async (req, res) => {
         if (page > totalPages) {
             return res.status(404).json({ message: 'Page Not Found' });
         }
-    
-    const productsQuery = `
+
+        const productsQuery = `
             SELECT 
                 p.*, 
                 s.Name AS ShopName,
@@ -614,8 +614,8 @@ router.get('/:id', async (req, res) => {
         let product = productResult.recordset[0];
 
         product.RatingsCount = Array.isArray(product.RatingsCount)
-                ? product.RatingsCount.find(count => count !== null) || 0
-                : product.RatingsCount;
+            ? product.RatingsCount.find(count => count !== null) || 0
+            : product.RatingsCount;
         const fieldsToParse = ['Images', 'Detail', 'Size', 'Color'];
         fieldsToParse.forEach(field => {
             if (product[field]) {
@@ -757,38 +757,37 @@ router.put('/:id', upload.fields([
                 ProductSimSlots = @ProductSimSlots, ProductModel = @ProductModel, Size = @Size, 
                 Color = @Color, Detail = @Detail, Weight = @Weight WHERE Id = @Id;
         `);
-         // Handle Variants
-      const existingVariants = await pool
-      .request()
-      .input('ProductId', sql.UniqueIdentifier, id)
-      .query(`SELECT * FROM ProductVariants WHERE ProductId = @ProductId`);
-    const existingVariantColors = existingVariants.recordset.map(v => v.VariantColor);
+        if(Array.isArray(variants) && variants.length > 0){
+            const existingVariants = await pool
+            .request()
+            .input('ProductId', sql.UniqueIdentifier, id)
+            .query(`SELECT * FROM ProductVariants WHERE ProductId = @ProductId`);
+        const existingVariantColors = existingVariants.recordset.map(v => v.VariantColor);
 
-    // Update or Insert Variants
-    for (const variant of variants) {
-      const { color, sizes, expense, retainedImage } = variant;
-      let imageUrl = retainedImage || '';
+        for (const variant of variants) {
+            const { color, sizes, expense, retainedImage } = variant;
+            let imageUrl = retainedImage || '';
 
-      if (req.files[`variants[${variants.indexOf(variant)}][image]`]) {
-        const imageFile = req.files[`variants[${variants.indexOf(variant)}][image]`][0];
-        const result = await cloudinary.v2.uploader.upload(imageFile.path);
-        imageUrl = result.secure_url;
+            if (req.files[`variants[${variants.indexOf(variant)}][image]`]) {
+                const imageFile = req.files[`variants[${variants.indexOf(variant)}][image]`][0];
+                const result = await cloudinary.v2.uploader.upload(imageFile.path);
+                imageUrl = result.secure_url;
 
-        if (retainedImage) {
-          await cloudinary.v2.uploader.destroy(retainedImage);
-        }
-      }
+                if (retainedImage) {
+                    await cloudinary.v2.uploader.destroy(retainedImage);
+                }
+            }
 
-      const sizesJson = Array.isArray(sizes) ? JSON.stringify(sizes) : sizes;
+            const sizesJson = Array.isArray(sizes) ? JSON.stringify(sizes) : sizes;
 
-      const variantRequest = pool.request();
-      variantRequest.input('ProductId', sql.UniqueIdentifier, id);
-      variantRequest.input('VariantColor', sql.NVarChar, color);
-      variantRequest.input('VariantImage', sql.NVarChar, imageUrl);
-      variantRequest.input('Sizes', sql.NVarChar, sizesJson);
-      variantRequest.input('Expense', sql.Decimal(10, 2), expense);
+            const variantRequest = pool.request();
+            variantRequest.input('ProductId', sql.UniqueIdentifier, id);
+            variantRequest.input('VariantColor', sql.NVarChar, color);
+            variantRequest.input('VariantImage', sql.NVarChar, imageUrl);
+            variantRequest.input('Sizes', sql.NVarChar, sizesJson);
+            variantRequest.input('Expense', sql.Decimal(10, 2), expense);
 
-      await variantRequest.query(`
+            await variantRequest.query(`
         IF EXISTS (SELECT 1 FROM ProductVariants WHERE ProductId = @ProductId AND VariantColor = @VariantColor)
         BEGIN
           UPDATE ProductVariants
@@ -801,33 +800,33 @@ router.put('/:id', upload.fields([
           VALUES (@ProductId, @VariantColor, @VariantImage, @Sizes, @Expense);
         END
       `);
-    }
+        }
 
-    // Remove Unused Variants
-    const incomingVariantColors = variants.map(v => v.color);
-    const variantsToDelete = existingVariantColors.filter(color => !incomingVariantColors.includes(color));
-    for (const color of variantsToDelete) {
-      await pool
-        .request()
-        .input('ProductId', sql.UniqueIdentifier, id)
-        .input('VariantColor', sql.NVarChar, color)
-        .query(`DELETE FROM ProductVariants WHERE ProductId = @ProductId AND VariantColor = @VariantColor`);
-    }
+        const incomingVariantColors = variants.map(v => v.color);
+        const variantsToDelete = existingVariantColors.filter(color => !incomingVariantColors.includes(color));
+        for (const color of variantsToDelete) {
+            await pool
+                .request()
+                .input('ProductId', sql.UniqueIdentifier, id)
+                .input('VariantColor', sql.NVarChar, color)
+                .query(`DELETE FROM ProductVariants WHERE ProductId = @ProductId AND VariantColor = @VariantColor`);
+        }
 
+        }
         if (safeColorVariants.length > 0) {
             for (const [index, colorVariant] of safeColorVariants.entries()) {
                 let colorVariantImageUrl = colorVariant.retainedImage || '';
-        
+
                 if (req.files[`colorVariants[${index}][image]`]) {
                     const colorVariantImage = req.files[`colorVariants[${index}][image]`][0];
                     const result = await cloudinary.v2.uploader.upload(colorVariantImage.path);
                     colorVariantImageUrl = result.secure_url;
-        
+
                     if (colorVariant.retainedImage) {
                         await cloudinary.v2.uploader.destroy(colorVariant.retainedImage);
                     }
                 }
-        
+
                 if (!colorVariantImageUrl) {
                     continue;
                 }
@@ -836,11 +835,11 @@ router.put('/:id', upload.fields([
                 colorVariantRequest.input('Color', sql.NVarChar, colorVariant.color);
                 colorVariantRequest.input('Image', sql.NVarChar, colorVariantImageUrl);
                 colorVariantRequest.input('Price', sql.Decimal(10, 2), colorVariant.price);
-                colorVariantRequest.input('OldPrice', sql.Decimal(10, 2), colorVariant.oldPrice);
+                colorVariantRequest.input('OldPrice', sql.Decimal(10, 2), colorVariant.oldprice);
                 colorVariantRequest.input('Discount', sql.Decimal(10, 2), colorVariant.discount);
                 colorVariantRequest.input('Expense', sql.Decimal(10, 2), colorVariant.expense);
                 colorVariantRequest.input('Stock', sql.Int, colorVariant.stock);
-        
+
                 await colorVariantRequest.query(`
                     IF EXISTS (
                         SELECT 1 FROM ProductColorVariants
@@ -861,7 +860,7 @@ router.put('/:id', upload.fields([
                 `);
             }
         }
-        
+
         res.status(200).send({ success: true, message: 'Product and variants updated successfully.' });
     } catch (error) {
         console.error('Error updating product:', error);
@@ -960,7 +959,7 @@ router.put('/:id', upload.fields([
 //         if (safeVariants.length > 0) {
 //             for (const [index, variant] of safeVariants.entries()) {
 //                 let variantImageUrl = variant.retainedImage || ''; 
-        
+
 //                 if (req.files[`variants[${index}][image]`]) {
 //                     const variantImage = req.files[`variants[${index}][image]`][0];
 //                     const result = await cloudinary.v2.uploader.upload(variantImage.path);
@@ -972,11 +971,11 @@ router.put('/:id', upload.fields([
 //                 const sizes = typeof variant.sizes === 'string'
 //                     ? JSON.parse(variant.sizes)
 //                     : variant.sizes;
-        
+
 //                 if (!Array.isArray(sizes)) {
 //                     return res.status(400).json({ success: false, message: 'Sizes must be an array.' });
 //                 }
-        
+
 //                 const variantRequest = pool.request();
 //                 variantRequest.input('ProductId', sql.UniqueIdentifier, id);
 //                 variantRequest.input('VariantColor', sql.NVarChar, variant.color);
@@ -1005,17 +1004,17 @@ router.put('/:id', upload.fields([
 //         if (safeColorVariants.length > 0) {
 //             for (const [index, colorVariant] of safeColorVariants.entries()) {
 //                 let colorVariantImageUrl = colorVariant.retainedImage || '';
-        
+
 //                 if (req.files[`colorVariants[${index}][image]`]) {
 //                     const colorVariantImage = req.files[`colorVariants[${index}][image]`][0];
 //                     const result = await cloudinary.v2.uploader.upload(colorVariantImage.path);
 //                     colorVariantImageUrl = result.secure_url;
-        
+
 //                     if (colorVariant.retainedImage) {
 //                         await cloudinary.v2.uploader.destroy(colorVariant.retainedImage);
 //                     }
 //                 }
-        
+
 //                 if (!colorVariantImageUrl) {
 //                     continue;
 //                 }
@@ -1028,7 +1027,7 @@ router.put('/:id', upload.fields([
 //                 colorVariantRequest.input('Discount', sql.Decimal(10, 2), colorVariant.discount);
 //                 colorVariantRequest.input('Expense', sql.Decimal(10, 2), colorVariant.expense);
 //                 colorVariantRequest.input('Stock', sql.Int, colorVariant.stock);
-        
+
 //                 await colorVariantRequest.query(`
 //                     IF EXISTS (
 //                         SELECT 1 FROM ProductColorVariants
@@ -1049,7 +1048,7 @@ router.put('/:id', upload.fields([
 //                 `);
 //             }
 //         }
-        
+
 //         res.status(200).send({ success: true, message: 'Product and variants updated successfully.' });
 //     } catch (error) {
 //         console.error('Error updating product:', error);
@@ -1198,17 +1197,17 @@ router.put('/:id', upload.fields([
 //         if (safeColorVariants.length > 0) {
 //             for (const [index, colorVariant] of safeColorVariants.entries()) {
 //                 let colorVariantImageUrl = colorVariant.retainedImage || '';
-        
+
 //                 if (req.files[`colorVariants[${index}][image]`]) {
 //                     const colorVariantImage = req.files[`colorVariants[${index}][image]`][0];
 //                     const result = await cloudinary.v2.uploader.upload(colorVariantImage.path);
 //                     colorVariantImageUrl = result.secure_url;
-        
+
 //                     if (colorVariant.retainedImage) {
 //                         await cloudinary.v2.uploader.destroy(colorVariant.retainedImage);
 //                     }
 //                 }
-        
+
 //                 if (!colorVariantImageUrl) {
 //                     continue;
 //                 }
@@ -1221,7 +1220,7 @@ router.put('/:id', upload.fields([
 //                 colorVariantRequest.input('Discount', sql.Decimal(10, 2), colorVariant.discount);
 //                 colorVariantRequest.input('Expense', sql.Decimal(10, 2), colorVariant.expense);
 //                 colorVariantRequest.input('Stock', sql.Int, colorVariant.stock);
-        
+
 //                 await colorVariantRequest.query(`
 //                     IF EXISTS (
 //                         SELECT 1 FROM ProductColorVariants
@@ -1242,7 +1241,7 @@ router.put('/:id', upload.fields([
 //                 `);
 //             }
 //         }
-        
+
 //         res.status(200).send({ success: true, message: 'Product and variants updated successfully.' });
 //     } catch (error) {
 //         console.error('Error updating product:', error);

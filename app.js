@@ -37,6 +37,7 @@ import returnsRoute from './routes/returns.js'
 import brandsRoute from './routes/brands.js'
 import opaymentsRoute from './routes/orderpayments.js'
 import bankdetailsroute from './routes/vendorsBankDetails.js'
+import shopTokens from './routes/shopTokens.js'
 
 app.use('/api/v1/user', userRoute)
 app.use('/api/v1/category', categoryRoute)
@@ -58,6 +59,7 @@ app.use('/api/v1/returns', returnsRoute)
 app.use('/api/v1/brands', brandsRoute)
 app.use('/api/v1/opayments', opaymentsRoute)
 app.use('/api/v1/vendors-bank-details', bankdetailsroute)
+app.use('/api/v1/shop-tokens', shopTokens)
 
 
 const server = http.createServer(app);

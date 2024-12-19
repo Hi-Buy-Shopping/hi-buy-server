@@ -14,7 +14,7 @@ router.post('/create', async (req, res) => {
   }
 
   try {
-    await createColorsTable(); // Ensure the table is created if it doesn't exist
+    await createColorsTable();
     const pool = await sql.connect(dbConnect);
 
     const insertQuery = `

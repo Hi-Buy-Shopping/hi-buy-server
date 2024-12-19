@@ -1,6 +1,7 @@
 import sql from 'mssql';
 import { dbConnect } from '../database/dbConfig.js';
 import nodemailer from 'nodemailer'
+import { sendPushNotification } from '../helper/sendNotifications.js';
 
 async function createOrders(req, res) {
     const {
@@ -85,6 +86,17 @@ async function createOrders(req, res) {
                     OUTPUT inserted.Id
                     VALUES (@ParentOrderId, @FullName, @Country, @StreetAddressLine1, @StreetAddressLine2, @Province, @City, @ZipCode, @PhoneNumber, @Email, @Amount, @UserId, @ShopId, 'Pending');
                 `);
+
+                const tokenQuery = `
+                SELECT DeviceToken FROM ShopTokens WHERE ShopId = @shopId
+              `;
+              const shopId = shop.shopId
+              const result = await sql.query(tokenQuery, { shopId });
+          
+              if (result.recordset.length > 0) {
+                const expoPushToken = result.recordset[0].DeviceToken;
+                await sendPushNotification(expoPushToken, orderId);
+              }
 
             const subOrderId = subOrderResult.recordset[0].Id;
 
@@ -422,6 +434,8 @@ const htmlContentForVendor = `
                 html: htmlContentForVendor,
             });
         }
+
+    
 
         res.status(201).json({ message: 'Orders created successfully', parentOrderId });
     } catch (error) {
