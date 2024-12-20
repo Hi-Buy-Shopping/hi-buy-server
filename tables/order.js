@@ -4,131 +4,137 @@ import nodemailer from 'nodemailer'
 import { sendPushNotification } from '../helper/sendNotifications.js';
 
 async function createOrders(req, res) {
-    const {
-        fullName, country, streetAddressLine1, streetAddressLine2, city,
-        state, zipCode, phoneNumber, email, userId, cartItems
-    } = req.body;
+  const {
+    fullName, country, streetAddressLine1, streetAddressLine2, city,
+    state, zipCode, phoneNumber, email, userId, cartItems
+  } = req.body;
 
-    const address = `${streetAddressLine1 +"," + city+"," + zipCode+"," + state}`
-    try {
-        if (!Array.isArray(cartItems) || cartItems.length === 0) {
-            throw new Error('cartItems must be a non-empty array');
-        }
+  const address = `${streetAddressLine1 + "," + city + "," + zipCode + "," + state}`
+  try {
+    if (!Array.isArray(cartItems) || cartItems.length === 0) {
+      throw new Error('cartItems must be a non-empty array');
+    }
 
-        const pool = await sql.connect(dbConnect);
+    const pool = await sql.connect(dbConnect);
 
-        const totalAmount = cartItems.reduce((acc, shop) => {
-            const shopTotal = shop.items.reduce((shopAcc, item) =>
-                shopAcc + (item.price * item.quantity), 0
-            );
-            return acc + shopTotal;
-        }, 0);
+    const totalAmount = cartItems.reduce((acc, shop) => {
+      const shopTotal = shop.items.reduce((shopAcc, item) =>
+        shopAcc + (item.price * item.quantity), 0
+      );
+      return acc + shopTotal;
+    }, 0);
 
-        console.log("Total amount:", totalAmount);
+    console.log("Total amount:", totalAmount);
 
-        const parentOrderResult = await pool.request()
-            .input('FullName', sql.NVarChar, fullName)
-            .input('Country', sql.NVarChar, country)
-            .input('StreetAddressLine1', sql.NVarChar, streetAddressLine1)
-            .input('StreetAddressLine2', sql.NVarChar, streetAddressLine2)
-            .input('Province', sql.NVarChar, state)
-            .input('City', sql.NVarChar, city)
-            .input('ZipCode', sql.NVarChar, zipCode)
-            .input('PhoneNumber', sql.NVarChar, phoneNumber)
-            .input('Email', sql.NVarChar, email)
-            .input('Amount', sql.Decimal, totalAmount)
-            .input('UserId', sql.UniqueIdentifier, userId)
-            .query(`
+    const parentOrderResult = await pool.request()
+      .input('FullName', sql.NVarChar, fullName)
+      .input('Country', sql.NVarChar, country)
+      .input('StreetAddressLine1', sql.NVarChar, streetAddressLine1)
+      .input('StreetAddressLine2', sql.NVarChar, streetAddressLine2)
+      .input('Province', sql.NVarChar, state)
+      .input('City', sql.NVarChar, city)
+      .input('ZipCode', sql.NVarChar, zipCode)
+      .input('PhoneNumber', sql.NVarChar, phoneNumber)
+      .input('Email', sql.NVarChar, email)
+      .input('Amount', sql.Decimal, totalAmount)
+      .input('UserId', sql.UniqueIdentifier, userId)
+      .query(`
                 INSERT INTO Orders (FullName, Country, StreetAddressLine1, StreetAddressLine2, Province, City, ZipCode, PhoneNumber, Email, Amount, UserId, Status)
                 OUTPUT inserted.Id
                 VALUES (@FullName, @Country, @StreetAddressLine1, @StreetAddressLine2, @Province, @City, @ZipCode, @PhoneNumber, @Email, @Amount, @UserId, 'Pending');
             `);
 
-        const parentOrderId = parentOrderResult.recordset[0].Id;
-                let vendorEmail;
-                let shopProducts;
-                let shopTotalAmount;
-        for (const shop of cartItems) {
-            shopProducts = shop.items;
-            shopTotalAmount = shopProducts.reduce((acc, item) => acc + (item.price * item.quantity), 0);
-            
-            const shopResult = await pool.request()
-            .input('ShopId', sql.UniqueIdentifier, shop.shopId)
-            .query(`
+    const parentOrderId = parentOrderResult.recordset[0].Id;
+    let vendorEmail;
+    let shopProducts;
+    let shopTotalAmount;
+    for (const shop of cartItems) {
+      shopProducts = shop.items;
+      shopTotalAmount = shopProducts.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+
+      const shopResult = await pool.request()
+        .input('ShopId', sql.UniqueIdentifier, shop.shopId)
+        .query(`
                 SELECT Email 
                 FROM Shops 
                 WHERE Id = @ShopId
             `);
 
-            if (!shopResult.recordset.length) {
-                console.error(`No shop found with Id: ${shop.shopId}`);
-                continue;
-            }
-        
-            vendorEmail = shopResult.recordset[0].Email;
+      if (!shopResult.recordset.length) {
+        console.error(`No shop found with Id: ${shop.shopId}`);
+        continue;
+      }
 
-            const subOrderResult = await pool.request()
-                .input('ParentOrderId', sql.UniqueIdentifier, parentOrderId)
-                .input('FullName', sql.NVarChar, fullName)
-                .input('Country', sql.NVarChar, country)
-                .input('StreetAddressLine1', sql.NVarChar, streetAddressLine1)
-                .input('StreetAddressLine2', sql.NVarChar, streetAddressLine2)
-                .input('Province', sql.NVarChar, state)
-                .input('City', sql.NVarChar, city)
-                .input('ZipCode', sql.NVarChar, zipCode)
-                .input('PhoneNumber', sql.NVarChar, phoneNumber)
-                .input('Email', sql.NVarChar, email)
-                .input('Amount', sql.Decimal, shopTotalAmount)
-                .input('UserId', sql.UniqueIdentifier, userId)
-                .input('ShopId', sql.UniqueIdentifier, shop.shopId)
-                .query(`
+      vendorEmail = shopResult.recordset[0].Email;
+
+      const subOrderResult = await pool.request()
+        .input('ParentOrderId', sql.UniqueIdentifier, parentOrderId)
+        .input('FullName', sql.NVarChar, fullName)
+        .input('Country', sql.NVarChar, country)
+        .input('StreetAddressLine1', sql.NVarChar, streetAddressLine1)
+        .input('StreetAddressLine2', sql.NVarChar, streetAddressLine2)
+        .input('Province', sql.NVarChar, state)
+        .input('City', sql.NVarChar, city)
+        .input('ZipCode', sql.NVarChar, zipCode)
+        .input('PhoneNumber', sql.NVarChar, phoneNumber)
+        .input('Email', sql.NVarChar, email)
+        .input('Amount', sql.Decimal, shopTotalAmount)
+        .input('UserId', sql.UniqueIdentifier, userId)
+        .input('ShopId', sql.UniqueIdentifier, shop.shopId)
+        .query(`
                     INSERT INTO Orders (ParentOrderId, FullName, Country, StreetAddressLine1, StreetAddressLine2, Province, City, ZipCode, PhoneNumber, Email, Amount, UserId, ShopId, Status)
                     OUTPUT inserted.Id
                     VALUES (@ParentOrderId, @FullName, @Country, @StreetAddressLine1, @StreetAddressLine2, @Province, @City, @ZipCode, @PhoneNumber, @Email, @Amount, @UserId, @ShopId, 'Pending');
                 `);
+      const tokenQuery = `
+                SELECT DeviceToken FROM ShopTokens WHERE ShopId = @ShopId
+            `;
+      // const result = await sql.query(tokenQuery, { shopId });
 
-                const tokenQuery = `
-                SELECT DeviceToken FROM ShopTokens WHERE ShopId = @shopId
-              `;
-              const shopId = shop.shopId
-              const result = await sql.query(tokenQuery, { shopId });
-          
-              if (result.recordset.length > 0) {
-                const expoPushToken = result.recordset[0].DeviceToken;
-                await sendPushNotification(expoPushToken, orderId);
-              }
+      // if (result.recordset.length > 0) {
+      //   const expoPushToken = result.recordset[0].DeviceToken;
+      //   await sendPushNotification(expoPushToken, orderId);
+      // }
+      const tokenResult = await pool.request()
+        .input('ShopId', sql.UniqueIdentifier, shop.shopId)
+        .query(tokenQuery);
 
-            const subOrderId = subOrderResult.recordset[0].Id;
+      if (tokenResult.recordset.length > 0) {
+        const expoPushToken = tokenResult.recordset[0].DeviceToken;
+        await sendPushNotification(expoPushToken, parentOrderId);
+      }
 
-            for (const product of shopProducts) {
-                console.log("Product details:", product);
+      const subOrderId = subOrderResult.recordset[0].Id;
 
-                if (!product.id || !product.quantity || !product.price) {
-                    console.error(`Missing mandatory fields for product ${product.id}`);
-                    continue;
-                }
+      for (const product of shopProducts) {
+        console.log("Product details:", product);
 
-                const selectedSize = product.size || 'Default Size';
-                const selectedColor = product.color || 'Default Color';
-                const selectedImage = product.image || 'Default Image';
+        if (!product.id || !product.quantity || !product.price) {
+          console.error(`Missing mandatory fields for product ${product.id}`);
+          continue;
+        }
 
-                await pool.request()
-                    .input('OrderId', sql.UniqueIdentifier, subOrderId)
-                    .input('ProductId', sql.UniqueIdentifier, product.id)
-                    .input('Quantity', sql.Int, product.quantity)
-                    .input('Price', sql.Decimal, product.price)
-                    .input('SelectedSize', sql.NVarChar, selectedSize)
-                    .input('SelectedColor', sql.NVarChar, selectedColor)
-                    .input('SelectedImage', sql.NVarChar, selectedImage)
-                    .input('ShopId', sql.UniqueIdentifier, product.shopId)
-                    .query(`
+        const selectedSize = product.size || 'Default Size';
+        const selectedColor = product.color || 'Default Color';
+        const selectedImage = product.image || 'Default Image';
+
+        await pool.request()
+          .input('OrderId', sql.UniqueIdentifier, subOrderId)
+          .input('ProductId', sql.UniqueIdentifier, product.id)
+          .input('Quantity', sql.Int, product.quantity)
+          .input('Price', sql.Decimal, product.price)
+          .input('SelectedSize', sql.NVarChar, selectedSize)
+          .input('SelectedColor', sql.NVarChar, selectedColor)
+          .input('SelectedImage', sql.NVarChar, selectedImage)
+          .input('ShopId', sql.UniqueIdentifier, product.shopId)
+          .query(`
             INSERT INTO OrderProducts (OrderId, ProductId, Quantity, Price, SelectedSize, SelectedColor, SelectedImage, ShopId)
             VALUES (@OrderId, @ProductId, @Quantity, @Price, @SelectedSize, @SelectedColor, @SelectedImage, @ShopId);
         `);
-            }
-        }
-console.log('shop email', vendorEmail)
-        const htmlContentForUser = `
+      }
+    }
+    console.log('shop email', vendorEmail)
+    const htmlContentForUser = `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -251,7 +257,7 @@ console.log('shop email', vendorEmail)
 </body>
 </html>
 `;
-const htmlContentForVendor = `
+    const htmlContentForVendor = `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -400,48 +406,48 @@ const htmlContentForVendor = `
 </html>
 `;
 
-        const transporter = nodemailer.createTransport({
-            service: 'gmail',
-            auth: {
-                user: 'hibuyshoppingofficial@gmail.com',
-                pass: 'albr myug eldw bzzf',
-            },
-        });
-        await transporter.sendMail({
-            from: 'HiBuyShopping <hibuyshoppingofficial@gmail.com>',
-            to: email,
-            subject: 'Order Confirmation - HiBuyShopping',
-            html: htmlContentForUser,
-        });
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: 'hibuyshoppingofficial@gmail.com',
+        pass: 'albr myug eldw bzzf',
+      },
+    });
+    await transporter.sendMail({
+      from: 'HiBuyShopping <hibuyshoppingofficial@gmail.com>',
+      to: email,
+      subject: 'Order Confirmation - HiBuyShopping',
+      html: htmlContentForUser,
+    });
 
-        // for (const shop of cartItems) {
-        //     const vendorEmail = shop.Email;
-        //     if (vendorEmail) {
-        //         await transporter.sendMail({
-        //             from: 'HiBuyShopping <hibuyshoppingofficial@gmail.com>',
-        //             to: vendorEmail,
-        //             subject: 'New Order Received - HiBuyShopping',
-        //             html: htmlContentForVendor,
-        //         });
-        //     }
-        // }
+    // for (const shop of cartItems) {
+    //     const vendorEmail = shop.Email;
+    //     if (vendorEmail) {
+    //         await transporter.sendMail({
+    //             from: 'HiBuyShopping <hibuyshoppingofficial@gmail.com>',
+    //             to: vendorEmail,
+    //             subject: 'New Order Received - HiBuyShopping',
+    //             html: htmlContentForVendor,
+    //         });
+    //     }
+    // }
 
-        if (vendorEmail) {
-            await transporter.sendMail({
-                from: 'HiBuyShopping <hibuyshoppingofficial@gmail.com>',
-                to: vendorEmail,
-                subject: 'New Order Received - HiBuyShopping',
-                html: htmlContentForVendor,
-            });
-        }
-
-    
-
-        res.status(201).json({ message: 'Orders created successfully', parentOrderId });
-    } catch (error) {
-        console.error('Error creating orders:', error);
-        res.status(500).json({ error: 'Error creating orders' });
+    if (vendorEmail) {
+      await transporter.sendMail({
+        from: 'HiBuyShopping <hibuyshoppingofficial@gmail.com>',
+        to: vendorEmail,
+        subject: 'New Order Received - HiBuyShopping',
+        html: htmlContentForVendor,
+      });
     }
+
+
+
+    res.status(201).json({ message: 'Orders created successfully', parentOrderId });
+  } catch (error) {
+    console.error('Error creating orders:', error);
+    res.status(500).json({ error: 'Error creating orders' });
+  }
 }
 
 export default createOrders;
