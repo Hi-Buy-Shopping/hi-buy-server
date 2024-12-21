@@ -17,12 +17,12 @@ cloudinary.v2.config({
 const storage = new CloudinaryStorage({
     cloudinary: cloudinary.v2,
     params: {
-      folder: 'reviews', 
-      allowedFormats: ['jpg', 'png', 'jpeg', 'webp'],
-      transformation: [{ width: 500, height: 500, crop: 'limit' }]
+        folder: 'reviews',
+        allowedFormats: ['jpg', 'png', 'jpeg', 'webp'],
+        transformation: [{ width: 500, height: 500, crop: 'limit' }]
     }
-  });
-  
+});
+
 const upload = multer({ storage });
 
 const isValidUUID = (uuid) => {
@@ -43,7 +43,7 @@ router.post('/product/:productId/review', upload.array('images'), async (req, re
     }
 
     try {
-        await createReviewsTable(); 
+        await createReviewsTable();
         const pool = await sql.connect(dbConnect);
 
         const checkOrderQuery = `
@@ -101,47 +101,101 @@ router.post('/product/:productId/review', upload.array('images'), async (req, re
     }
 });
 
-
-// router.get('/product/:productId/reviews', async (req, res) => {
+// router.get('/product/:productId/review/user', async (req, res) => {
 //     const { productId } = req.params;
+//     const { userId } = req.query;
 
 //     if (!isValidUUID(productId)) {
-//         return res.status(400).json({ error: 'Invalid id format' });
-//       }
+//         return res.status(400).json({ error: 'Invalid product ID format' });
+//     }
+
+//     if (!isValidUUID(userId)) {
+//         return res.status(400).json({ error: 'Invalid user ID format' });
+//     }
+
 //     try {
 //         const pool = await sql.connect(dbConnect);
 
-//         const getReviewsQuery = `
-//             SELECT Id, UserId, Rating, Comment, VendorReply, Images, CreatedAt
+//         const fetchReviewQuery = `
+//             SELECT 
+//                 Id, ProductId, UserId, ShopId, Rating, Comment, Images, CreatedAt 
 //             FROM Reviews
-//             WHERE ProductId = @ProductId
-//             ORDER BY CreatedAt DESC;
+//             WHERE ProductId = @ProductId AND UserId = @UserId;
 //         `;
 
-//         const reviewsResult = await pool.request()
+//         const reviewResult = await pool.request()
 //             .input('ProductId', sql.UniqueIdentifier, productId)
-//             .query(getReviewsQuery);
+//             .input('UserId', sql.UniqueIdentifier, userId)
+//             .query(fetchReviewQuery);
 
-//         const reviews = reviewsResult.recordset.map(review => ({
-//             Id: review.Id,
-//             userId: review.UserId,
-//             rating: review.Rating,
-//             comment: review.Comment,
-//             vendorReply: review.VendorReply,
-//             images: JSON.parse(review.Images), 
-//             createdAt: review.CreatedAt
-//         }));
+//         if (reviewResult.recordset.length === 0) {
+//             return res.status(404).json({ message: 'No review found for this user and product.' });
+//         }
 
-//         res.status(200).json(reviews);
+//         const userReview = reviewResult.recordset[0];
+//         userReview.Images = JSON.parse(userReview.Images);
+
+//         res.status(200).json(userReview);
 //     } catch (error) {
-//         console.error('Error fetching reviews:', error);
-//         res.status(500).json({ message: 'Error fetching reviews' });
+//         console.error('Error fetching user review:', error);
+//         res.status(500).json({ message: 'Error fetching user review' });
 //     }
 // });
 
+router.get('/product/:productId/review/user', async (req, res) => {
+    const { productId } = req.params;
+    const { userId } = req.query;
+
+    if (!isValidUUID(productId)) {
+        return res.status(400).json({ error: 'Invalid product ID format' });
+    }
+
+    if (!isValidUUID(userId)) {
+        return res.status(400).json({ error: 'Invalid user ID format' });
+    }
+
+    try {
+        const pool = await sql.connect(dbConnect);
+
+        const fetchReviewQuery = `
+            SELECT 
+                r.Id, 
+                r.ProductId, 
+                r.UserId, 
+                r.ShopId, 
+                r.Rating, 
+                r.Comment, 
+                r.Images, 
+                r.CreatedAt, 
+                p.Name AS ProductName
+            FROM Reviews r
+            INNER JOIN Products p ON r.ProductId = p.Id
+            WHERE r.ProductId = @ProductId AND r.UserId = @UserId;
+        `;
+
+        const reviewResult = await pool.request()
+            .input('ProductId', sql.UniqueIdentifier, productId)
+            .input('UserId', sql.UniqueIdentifier, userId)
+            .query(fetchReviewQuery);
+
+        if (reviewResult.recordset.length === 0) {
+            return res.status(404).json({ message: 'No review found for this user and product.' });
+        }
+
+        const userReview = reviewResult.recordset[0];
+        userReview.Images = JSON.parse(userReview.Images);
+
+        res.status(200).json(userReview);
+    } catch (error) {
+        console.error('Error fetching user review:', error);
+        res.status(500).json({ message: 'Error fetching user review' });
+    }
+});
+
+
 router.get('/product/:productId/reviews', async (req, res) => {
     const { productId } = req.params;
-    const { userId } = req.query; // Pass userId from the frontend to check user reactions
+    const { userId } = req.query;
 
     if (!isValidUUID(productId)) {
         return res.status(400).json({ error: 'Invalid id format' });
@@ -163,7 +217,6 @@ router.get('/product/:productId/reviews', async (req, res) => {
 
         const reviews = await Promise.all(
             reviewsResult.recordset.map(async (review) => {
-                // Fetch total likes for the review
                 const countReactionsQuery = `
                     SELECT COUNT(*) as totalLikes FROM ReviewReactions WHERE ReviewId = @ReviewId AND ReactionType = 'like';
                 `;
@@ -172,7 +225,6 @@ router.get('/product/:productId/reviews', async (req, res) => {
                     .query(countReactionsQuery);
                 const totalLikes = countReactionsResult.recordset[0].totalLikes;
 
-                // Check if the user has reacted
                 let userReacted = false;
                 if (userId) {
                     const userReactionQuery = `
@@ -191,7 +243,7 @@ router.get('/product/:productId/reviews', async (req, res) => {
                     rating: review.Rating,
                     comment: review.Comment,
                     vendorReply: review.VendorReply,
-                    images: JSON.parse(review.Images), 
+                    images: JSON.parse(review.Images),
                     createdAt: review.CreatedAt,
                     totalLikes,
                     userReacted,
@@ -205,7 +257,6 @@ router.get('/product/:productId/reviews', async (req, res) => {
         res.status(500).json({ message: 'Error fetching reviews' });
     }
 });
-
 
 router.post('/review/:reviewId/react', async (req, res) => {
     const { reviewId } = req.params;
@@ -295,7 +346,7 @@ router.get('/review/:reviewId/reactions', async (req, res) => {
 
 router.post('/review/:reviewId/reply', async (req, res) => {
     const { reviewId } = req.params;
-    const { vendorReply, shopId } = req.body; 
+    const { vendorReply, shopId } = req.body;
 
     if (!shopId) {
         return res.status(401).json({ message: 'Shop ID is required' });

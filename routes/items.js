@@ -68,7 +68,7 @@ router.get('/', async (req, res) => {
   try {
     const subSubCategoryId = req.query.subSubCategoryId;
     const page = parseInt(req.query.page) || 1;
-    const perPage = parseInt(req.query.perPage) || 20;
+    const perPage = parseInt(req.query.perPage) || 40;
     const skip = (page - 1) * perPage;
 
     const pool = await sql.connect(dbConnect);

@@ -68,7 +68,7 @@ router.post('/create', upload.single('image'), async (req, res) => {
 router.get('/', async (req, res) => {
   try {
     const page = parseInt(req.query.page);
-    const perPage = parseInt(req.query.perPage);
+    const perPage = parseInt(req.query.perPage) || 40;
     const skip = page ? (page - 1) * perPage : 0;
     const subCategoryId = req.query.subCategoryId; 
 
