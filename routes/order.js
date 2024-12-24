@@ -309,12 +309,72 @@ router.get('/vendor/:shopId', async (req, res) => {
     }
 });
 
+// router.get('/vendor/summary/:shopId', async (req, res) => {
+//     const { shopId } = req.params;
+
+//     try {
+//         const pool = await sql.connect(dbConnect);
+//         const result = await pool.request()
+//             .input('ShopId', sql.UniqueIdentifier, shopId)
+//             .query(`
+//                 SELECT 
+//                     o.Id AS OrderId,
+//                     o.Amount AS OrderAmount,
+//                     op.Quantity,
+//                     op.SelectedSize,
+//                     op.SelectedColor,
+//                     p.Name AS ProductName,
+//                     ISNULL(cv.Price, ISNULL(pv.SizePrice, 0)) AS ProductPrice,
+//                     ISNULL(cv.Expense, ISNULL(pv.SizeExpense, 0)) AS ProductExpense,
+//                     p.Images
+//                 FROM Orders o
+//                 LEFT JOIN OrderProducts op ON o.Id = op.OrderId
+//                 LEFT JOIN Products p ON op.ProductId = p.Id
+//                 LEFT JOIN ProductColorVariants cv ON p.Id = cv.ProductId AND cv.Color = op.SelectedColor
+//                 LEFT JOIN (
+//                     SELECT 
+//                         pv.ProductId, 
+//                         JSON_VALUE(size.value, '$.price') AS SizePrice,
+//                         JSON_VALUE(size.value, '$.expense') AS SizeExpense,
+//                         JSON_VALUE(size.value, '$.size') AS SizeName
+//                     FROM ProductVariants pv
+//                     CROSS APPLY OPENJSON(pv.Sizes) AS size
+//                 ) pv ON p.Id = pv.ProductId AND pv.SizeName = op.SelectedSize
+//                 WHERE o.ShopId = @ShopId AND o.Status = 'delivered'
+//             `);
+
+//         if (result.recordset.length === 0) {
+//             return res.status(404).json({ error: 'No delivered orders found for this shop' });
+//         }
+
+//         let totalRevenue = 0;
+//         let totalExpense = 0;
+
+//         result.recordset.forEach(order => {
+//             totalRevenue += order.ProductPrice * order.Quantity;
+//             totalExpense += order.ProductExpense * order.Quantity;
+//         });
+
+//         const summary = {
+//             totalRevenue,
+//             totalExpense,
+//             profit: totalRevenue - totalExpense,
+//         };
+
+//         res.status(200).json(summary);
+//     } catch (error) {
+//         console.error('Error fetching vendor summary:', error);
+//         res.status(500).json({ error: 'Error fetching vendor summary' });
+//     }
+// });
 router.get('/vendor/summary/:shopId', async (req, res) => {
     const { shopId } = req.params;
 
     try {
         const pool = await sql.connect(dbConnect);
-        const result = await pool.request()
+        
+        // Fetch order details and calculate revenue and expense
+        const orderDetailsResult = await pool.request()
             .input('ShopId', sql.UniqueIdentifier, shopId)
             .query(`
                 SELECT 
@@ -343,14 +403,18 @@ router.get('/vendor/summary/:shopId', async (req, res) => {
                 WHERE o.ShopId = @ShopId AND o.Status = 'delivered'
             `);
 
-        if (result.recordset.length === 0) {
-            return res.status(404).json({ error: 'No delivered orders found for this shop' });
-        }
+        const totalOrdersResult = await pool.request()
+            .input('ShopId', sql.UniqueIdentifier, shopId)
+            .query(`
+                SELECT COUNT(*) AS TotalOrders
+                FROM Orders
+                WHERE ShopId = @ShopId AND Status = 'delivered'
+            `);
 
         let totalRevenue = 0;
         let totalExpense = 0;
 
-        result.recordset.forEach(order => {
+        orderDetailsResult.recordset.forEach(order => {
             totalRevenue += order.ProductPrice * order.Quantity;
             totalExpense += order.ProductExpense * order.Quantity;
         });
@@ -359,6 +423,7 @@ router.get('/vendor/summary/:shopId', async (req, res) => {
             totalRevenue,
             totalExpense,
             profit: totalRevenue - totalExpense,
+            totalOrders: totalOrdersResult.recordset[0].TotalOrders,
         };
 
         res.status(200).json(summary);

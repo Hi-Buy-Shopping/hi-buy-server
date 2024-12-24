@@ -205,6 +205,63 @@ router.patch('/question/:questionId/reply/:replyId', async (req, res) => {
         res.status(500).json({ message: 'Error updating reply' });
     }
 });
+// router.get('/shop/:shopId', async (req, res) => {
+//     const { shopId } = req.params;
+
+//     try {
+//         const pool = await sql.connect(dbConnect);
+
+//         const getQuestionsQuery = `
+//             SELECT q.Id AS QuestionId, q.UserId, q.Question, q.CreatedAt AS QuestionCreatedAt,
+//                    r.Id AS ReplyId, r.ShopId, r.Reply, r.CreatedAt AS ReplyCreatedAt,
+//                    p.Id AS ProductId, p.Name AS ProductName
+//             FROM Questions q
+//             INNER JOIN Products p ON q.ProductId = p.Id
+//             LEFT JOIN QuestionReplies r ON q.Id = r.QuestionId
+//             WHERE p.ShopId = @ShopId
+//             ORDER BY q.CreatedAt DESC;
+//         `;
+
+//         const questionsResult = await pool.request()
+//             .input('ShopId', sql.UniqueIdentifier, shopId)
+//             .query(getQuestionsQuery);
+
+//         const questions = questionsResult.recordset.reduce((acc, row) => {
+//             const question = acc.find(q => q.QuestionId === row.QuestionId);
+//             if (question) {
+//                 if (row.ReplyId) {
+//                     question.replies.push({
+//                         ReplyId: row.ReplyId,
+//                         ShopId: row.ShopId,
+//                         Reply: row.Reply,
+//                         ReplyCreatedAt: row.ReplyCreatedAt
+//                     });
+//                 }
+//             } else {
+//                 acc.push({
+//                     QuestionId: row.QuestionId,
+//                     UserId: row.UserId,
+//                     Question: row.Question,
+//                     QuestionCreatedAt: row.QuestionCreatedAt,
+//                     ProductId: row.ProductId,
+//                     ProductName: row.ProductName,
+//                     replies: row.ReplyId ? [{
+//                         ReplyId: row.ReplyId,
+//                         ShopId: row.ShopId,
+//                         Reply: row.Reply,
+//                         ReplyCreatedAt: row.ReplyCreatedAt
+//                     }] : []
+//                 });
+//             }
+//             return acc;
+//         }, []);
+
+//         res.status(200).json(questions);
+//     } catch (error) {
+//         console.error('Error fetching questions and replies:', error);
+//         res.status(500).json({ message: 'Error fetching questions and replies' });
+//     }
+// });
 router.get('/shop/:shopId', async (req, res) => {
     const { shopId } = req.params;
 
@@ -214,10 +271,12 @@ router.get('/shop/:shopId', async (req, res) => {
         const getQuestionsQuery = `
             SELECT q.Id AS QuestionId, q.UserId, q.Question, q.CreatedAt AS QuestionCreatedAt,
                    r.Id AS ReplyId, r.ShopId, r.Reply, r.CreatedAt AS ReplyCreatedAt,
-                   p.Id AS ProductId, p.Name AS ProductName
+                   p.Id AS ProductId, p.Name AS ProductName, p.Images AS ProductImages,
+                   u.Name AS UserName, u.Images AS UserLogo
             FROM Questions q
             INNER JOIN Products p ON q.ProductId = p.Id
             LEFT JOIN QuestionReplies r ON q.Id = r.QuestionId
+            LEFT JOIN Users u ON q.UserId = u.Id
             WHERE p.ShopId = @ShopId
             ORDER BY q.CreatedAt DESC;
         `;
@@ -241,10 +300,13 @@ router.get('/shop/:shopId', async (req, res) => {
                 acc.push({
                     QuestionId: row.QuestionId,
                     UserId: row.UserId,
+                    UserName: row.UserName,
+                    UserLogo: row.UserLogo,
                     Question: row.Question,
                     QuestionCreatedAt: row.QuestionCreatedAt,
                     ProductId: row.ProductId,
                     ProductName: row.ProductName,
+                    ProductImages: row.ProductImages ? JSON.parse(row.ProductImages) : [],
                     replies: row.ReplyId ? [{
                         ReplyId: row.ReplyId,
                         ShopId: row.ShopId,
