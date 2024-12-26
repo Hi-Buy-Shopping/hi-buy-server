@@ -158,6 +158,7 @@ router.get('/user/orders/:userId', async (req, res) => {
                     CROSS APPLY OPENJSON(pv.Sizes) AS size
                 ) pv ON p.Id = pv.ProductId AND pv.SizeName = op.SelectedSize
                 WHERE o.UserId = @UserId
+                AND o.ParentOrderId IS NULL
             `);
 
         if (result.recordset.length === 0) {
@@ -373,7 +374,6 @@ router.get('/vendor/summary/:shopId', async (req, res) => {
     try {
         const pool = await sql.connect(dbConnect);
         
-        // Fetch order details and calculate revenue and expense
         const orderDetailsResult = await pool.request()
             .input('ShopId', sql.UniqueIdentifier, shopId)
             .query(`
