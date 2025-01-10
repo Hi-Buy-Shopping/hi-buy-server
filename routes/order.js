@@ -53,6 +53,8 @@ router.get('/:id', async (req, res) => {
                     o.Amount, 
                     o.Status, 
                     o.CreatedAt, 
+                    o.TotalAmount, 
+                    o.Discount, 
                     op.ProductId, 
                     p.Name AS ProductName, 
                     ISNULL(
@@ -130,6 +132,8 @@ router.get('/order/:orderGroupId', async (req, res) => {
                     o.PhoneNumber, 
                     o.Email, 
                     o.Amount, 
+                    o.TotalAmount, 
+                    o.Discount,
                     o.Status, 
                     o.CreatedAt, 
                     op.ProductId, 
