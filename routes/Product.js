@@ -149,7 +149,7 @@ router.post('/create', upload.fields([
         productRequest.input('ProductModel', sql.NVarChar, productModel);
         productRequest.input('Size', sql.NVarChar, JSON.stringify(productSizes));
         productRequest.input('Color', sql.NVarChar, JSON.stringify(productColors));
-        productRequest.input('Detail', sql.NVarChar, JSON.stringify(parsedProductDetails)); // Store as JSON string
+        productRequest.input('Detail', sql.NVarChar, JSON.stringify(parsedProductDetails));
         productRequest.input('Weight', sql.Decimal(4, 2), weight);
 
         const productResult = await productRequest.query(`

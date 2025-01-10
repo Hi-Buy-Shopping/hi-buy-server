@@ -2,7 +2,6 @@ import nodemailer from 'nodemailer'
 
 
 const sendVerificationEmail = async (to, user, verifyCode) => {
-  console.log('Function called');
   const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
@@ -37,7 +36,7 @@ const sendVerificationEmail = async (to, user, verifyCode) => {
         box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
       }
       .header {
-        background-color: #2d2df5;
+        background-color: #f85606;
         padding: 20px;
         text-align: center;
         color: #ffffff;
@@ -56,7 +55,7 @@ const sendVerificationEmail = async (to, user, verifyCode) => {
       .code {
         font-size: 24px;
         font-weight: bold;
-        color: #2d2df5;
+        color: #f85606;
         text-align: center;
         margin: 20px 0;
       }
@@ -104,7 +103,6 @@ const sendVerificationEmail = async (to, user, verifyCode) => {
 
   try {
     await transporter.sendMail(mailOptions);
-    console.log(`Email sent to ${to}`);
   } catch (err) {
     console.error('Error sending email:', err);
   }

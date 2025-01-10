@@ -325,7 +325,6 @@ router.post('/verify-reset-code', async (req, res) => {
     }
 });
 
-
 router.post('/reset-password', async (req, res) => {
     const { email, newPassword } = req.body;
 
@@ -367,14 +366,12 @@ router.post('/reset-password', async (req, res) => {
     }
 });
 
-
 router.post('/resend-reset-code', async (req, res) => {
     const { email } = req.body;
 
     try {
         const pool = await sql.connect(dbConnect);
 
-        // Check if the user exists
         const userResult = await pool.request()
             .input('email', sql.NVarChar, email)
             .query('SELECT * FROM Users WHERE Email = @Email');

@@ -1,11 +1,11 @@
 
 import nodemailer from 'nodemailer';
 
-const sendForgetPasswordEmail = async (to, user, verifyCode) => {
+const verifyModifyEmail = async (to, user, verifyCode) => {
   const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
-      user: 'hibuyshoppingofficial@gmail.com', 
+      user: 'hibuyshoppingofficial@gmail.com',
       pass: 'albr myug eldw bzzf',
     },
   });
@@ -81,7 +81,7 @@ const sendForgetPasswordEmail = async (to, user, verifyCode) => {
       </div>
       <div class="content">
         <p>Hello ${user},</p>
-        <p>You requested to reset your password. Please use the following verification code to reset your password:</p>
+        <p>You requested to modify your email. Please use the following verification code to verify your hibuyshopping seller acccount:</p>
         <div class="code">${verifyCode}</div>
         <p>If you did not request this, please ignore this email.</p>
       </div>
@@ -107,4 +107,4 @@ const sendForgetPasswordEmail = async (to, user, verifyCode) => {
   }
 };
 
-export { sendForgetPasswordEmail }
+export { verifyModifyEmail }

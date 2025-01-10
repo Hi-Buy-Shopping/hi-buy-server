@@ -105,6 +105,85 @@ router.get('/:id', async (req, res) => {
     }
 });
 
+router.get('/order/:orderGroupId', async (req, res) => {
+    const { orderGroupId } = req.params;
+    if (!isValidUUID(orderGroupId)) {
+        return res.status(400).json({ error: 'Invalid OrderGroupId format' });
+    }
+
+    try {
+        const pool = await sql.connect(dbConnect);
+
+        const result = await pool.request()
+            .input('OrderGroupId', sql.UniqueIdentifier, orderGroupId)
+            .query(`
+                SELECT 
+                    o.Id AS OrderId, 
+                    o.OrderGroupId,
+                    o.FullName, 
+                    o.Country, 
+                    o.StreetAddressLine1, 
+                    o.StreetAddressLine2, 
+                    o.Province, 
+                    o.City, 
+                    o.ZipCode, 
+                    o.PhoneNumber, 
+                    o.Email, 
+                    o.Amount, 
+                    o.Status, 
+                    o.CreatedAt, 
+                    op.ProductId, 
+                    p.Name AS ProductName, 
+                    ISNULL(
+                        CASE 
+                            WHEN cv.Price IS NOT NULL THEN cv.Price
+                            WHEN pv.SizePrice IS NOT NULL THEN pv.SizePrice
+                            ELSE 0
+                        END, 0
+                    ) AS ProductPrice, 
+                    op.Quantity,
+                    op.SelectedSize,
+                    op.SelectedColor,
+                    ISNULL(op.SelectedImage, '') AS SelectedImage, -- Fallback to empty string if SelectedImage is not available
+                    p.Images -- Get all product images (JSON array)
+                FROM Orders o
+                LEFT JOIN OrderProducts op ON o.OrderGroupId = op.OrderGroupId
+                LEFT JOIN Products p ON op.ProductId = p.Id
+                LEFT JOIN ProductColorVariants cv ON p.Id = cv.ProductId AND cv.Color = op.SelectedColor
+                LEFT JOIN (
+                    SELECT 
+                        pv.ProductId, 
+                        JSON_VALUE(size.value, '$.price') AS SizePrice,
+                        JSON_VALUE(size.value, '$.size') AS SizeName
+                    FROM ProductVariants pv
+                    CROSS APPLY OPENJSON(pv.Sizes) AS size
+                ) pv ON p.Id = pv.ProductId AND pv.SizeName = op.SelectedSize
+                WHERE o.OrderGroupId = @OrderGroupId
+                AND o.ParentOrderId IS NULL -- Ensure ParentOrderId is NULL
+            `);
+
+        if (result.recordset.length === 0) {
+            return res.status(404).json({ error: 'No orders found for the given OrderGroupId' });
+        }
+
+        const ordersWithParsedImages = result.recordset.map(order => {
+            const productImages = JSON.parse(order.Images || '[]');
+            const fallbackImage = productImages[0] || 'No image available';
+
+            return {
+                ...order,
+                Images: productImages,
+                SelectedImage: order.SelectedImage || fallbackImage 
+            };
+        });
+
+        res.status(200).json(ordersWithParsedImages);
+    } catch (error) {
+        console.error('Error fetching order products by OrderGroupId:', error);
+        res.status(500).json({ error: 'Error fetching order products by OrderGroupId' });
+    }
+});
+
 
 router.get('/user/orders/:userId', async (req, res) => {
     const { userId } = req.params;
@@ -120,6 +199,7 @@ router.get('/user/orders/:userId', async (req, res) => {
             .query(`
                 SELECT 
                     o.Id AS OrderId, 
+                    o.OrderGroupId, 
                     o.FullName, 
                     o.Country, 
                     o.StreetAddressLine1, 

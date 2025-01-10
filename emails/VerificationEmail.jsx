@@ -52,7 +52,7 @@ const VerificationEmail = ({ name, otp }) => {
             }),
             Row({
               children: Text({
-                children: `Hello ${name} Thanks for starting the new Eliphstore account creation process. We want to make sure it's really you. Please enter the following verification code when prompted.
+                children: `Hello ${name} Thanks for starting the new Hibuy account creation process. We want to make sure it's really you. Please enter the following verification code when prompted.
                  If you don't want to create an account, you can ignore this message.`,
               }),
             }),
