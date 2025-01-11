@@ -17,6 +17,8 @@ app.options('*', cors());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
+
+
 import userRoute from './routes/user.js'
 import categoryRoute from './routes/category.js'
 import subCategoryRoute from './routes/subCategory.js'
