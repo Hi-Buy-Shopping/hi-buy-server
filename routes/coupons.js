@@ -150,11 +150,10 @@ router.delete("/:id", async (req, res) => {
   }
 });
 
-router.get("/", async (req, res) => {
+router.get("/vendor/:id", async (req, res) => {
   try {
-    const vendorId = req.query.vendorId;
-
-    if (!vendorId) {
+    const { id } = req.params;
+    if (!id) {
       return res.status(400).json({ message: "VendorId is required." });
     }
 
@@ -166,7 +165,7 @@ router.get("/", async (req, res) => {
 
     const result = await pool
       .request()
-      .input("VendorId", sql.UniqueIdentifier, vendorId)
+      .input("VendorId", sql.UniqueIdentifier, id)
       .query(query);
 
     res.status(200).json(result.recordset);
